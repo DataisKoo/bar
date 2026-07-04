@@ -252,6 +252,14 @@ html,body{ margin:0; padding:0; background:var(--ink-page); }
   border-radius:999px; box-shadow:0 14px 30px -10px rgba(0,0,0,.7), inset 0 0 0 1px rgba(200,163,90,.4);
   animation:kooUp .25s ease; }
 
+/* wider desktop shell → the fixed-height image band gets over-letterboxed and crops the
+   glass low; give the photo areas more height so the framing matches the phone view.
+   Placed after the base .featured-img/.recipe-hero rules so it wins on source order. */
+@media (min-width:760px){
+  .featured-img{ height:300px; }
+  .recipe-hero{ height:260px; }
+}
+
 [hidden]{ display:none !important; }
 </style>
 </head>
