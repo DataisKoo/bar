@@ -2,6 +2,12 @@
   "config": {
     "greeting": "What are we having tonight?"
   },
+  "tabs": [
+    { "key": "Cocktails", "label": "Cocktails" },
+    { "key": "Coffee & Tea", "label": "Coffee & Tea" },
+    { "key": "Mocktails & More", "label": "Mocktails" },
+    { "key": "Whisky", "label": "Whisky" }
+  ],
   "drinks": [
     { "cat": "Cocktails", "name": "Tequila Screwdriver", "spec": "Tequila · Orange Juice", "desc": "Bright and easy — tequila lengthened with fresh orange.", "tint": "rgba(216,135,60,.55)", "pick": false, "pour": [{ "name": "Tequila", "amt": "90 ml" }, { "name": "Orange Juice", "amt": "180 ml" }, { "name": "Ice", "amt": "Cubed" }] },
     { "cat": "Cocktails", "name": "Malibu", "spec": "Malibu · Pineapple", "desc": "Coconut and pineapple. A holiday in a glass.", "tint": "rgba(216,194,74,.5)", "pick": false, "pour": [{ "name": "Malibu", "amt": "120 ml" }, { "name": "Pineapple Juice", "amt": "240 ml" }, { "name": "Ice", "amt": "Cubed" }] },

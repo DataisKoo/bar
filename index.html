@@ -357,12 +357,10 @@ const STATUS = {
   served:{ rank:2, label:'Served', cls:'served', action:null,           next:'served' },
 };
 
-const TABS = [
-  { key:'Cocktails',        label:'Cocktails' },
-  { key:'Coffee & Tea',     label:'Coffee & Tea' },
-  { key:'Mocktails & More', label:'Mocktails' },
-  { key:'Whisky',           label:'Whisky' },
-];
+// Categories (tabs) are loaded from drinks.json at boot. If that list is missing,
+// they're derived from the drinks' own categories — so the whole menu structure,
+// tabs included, is editable from drinks.json with no code change.
+let TABS = [];
 
 /* ---------- state ---------- */
 const S = {
@@ -746,6 +744,15 @@ async function boot(){
     const data = await res.json();
     DRINKS = Array.isArray(data.drinks) ? data.drinks : [];
     if (!DRINKS.length) throw new Error('no drinks in drinks.json');
+    // tabs from drinks.json, else derived from the drinks' categories (first-seen order)
+    if (Array.isArray(data.tabs) && data.tabs.length){
+      TABS = data.tabs.filter(t => t && t.key).map(t => ({ key:t.key, label:t.label || t.key }));
+    } else {
+      const seen = [];
+      DRINKS.forEach(d => { if (d.cat && !seen.includes(d.cat)) seen.push(d.cat); });
+      TABS = seen.map(k => ({ key:k, label:k }));
+    }
+    if (TABS[0]) S.activeTab = TABS[0].key;   // open on the first category, whatever it's named
     $('greeting').textContent = (data.config && data.config.greeting) || STRINGS.greetingFallback;
     DRINKS.forEach(d => {
       if (!TABS.some(t => t.key === d.cat)) console.warn(`drink "${d.name}" has unknown category "${d.cat}" — it will not appear on any tab`);
