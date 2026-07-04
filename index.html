@@ -90,6 +90,7 @@ html,body{ margin:0; padding:0; background:var(--ink-page); }
 .featured-img{ height:186px; position:relative; display:flex; align-items:center; justify-content:center; }
 .tint{ position:absolute; inset:0; }
 .icon-rel{ position:relative; }
+.photo{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 .pick-pill{ position:absolute; font-size:9px; text-transform:uppercase; color:var(--cta-ink);
   background:var(--brass); padding:4px 8px; border-radius:999px; }
 .pick-pill--featured{ top:12px; left:12px; letter-spacing:.2em; font-weight:500; }
@@ -389,6 +390,14 @@ function drinkIcon(d, size, stroke){
     ? `<svg ${attrs}><path d="M6 8h12l-1 11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 8Z"/><path d="M7 13h10"/></svg>`
     : `<svg ${attrs}><path d="M4 5h16M6 5c0 4 2.7 6 6 6s6-2 6-6M12 11v7M8 18h8"/></svg>`;
 }
+// the image area shared by featured card, list thumb and recipe hero:
+// gradient tint (also the load/fallback bg) + either the drink photo or the placeholder icon, + optional pill
+function mediaInner(d, iconSize, big, pillHtml){
+  const layer = d.img
+    ? `<img class="photo" src="${esc(d.img)}" alt="${esc(d.name)}" loading="lazy">`
+    : drinkIcon(d, iconSize, big ? ICON_STROKE.hero : ICON_STROKE.list);
+  return `<div class="tint" style="${esc(tintBg(d.tint, big))}"></div>${layer}${pillHtml || ''}`;
+}
 function flashToast(msg){
   if (toastTimer) clearTimeout(toastTimer);
   $('toast').textContent = msg;
@@ -476,9 +485,7 @@ function renderFeatured(){
   $('featured').innerHTML =
     `<div class="featured" onclick="App.open(${idx})">
       <div class="featured-img">
-        <div class="tint" style="${esc(tintBg(d.tint, true))}"></div>
-        ${drinkIcon(d, 56, ICON_STROKE.hero)}
-        <span class="pick-pill pick-pill--featured">${STRINGS.koosPick}</span>
+        ${mediaInner(d, 56, true, `<span class="pick-pill pick-pill--featured">${STRINGS.koosPick}</span>`)}
       </div>
       <div class="featured-caption">
         <div class="featured-name">${esc(d.name)}</div>
@@ -496,8 +503,7 @@ function renderList(){
     .map(({ d, i }) =>
       `<div class="row" onclick="App.open(${i})">
         <div class="thumb">
-          <div class="tint" style="${esc(tintBg(d.tint, false))}"></div>
-          ${drinkIcon(d, d.isWhisky ? 24 : 26, ICON_STROKE.list)}
+          ${mediaInner(d, d.isWhisky ? 24 : 26, false, '')}
         </div>
         <div class="row-body">
           <div class="row-top">
@@ -529,9 +535,7 @@ function renderRecipe(){
       <div class="sheet-scroll">
         <div class="handle-row"><div class="handle"></div></div>
         <div class="recipe-hero">
-          <div class="tint" style="${esc(tintBg(d.tint, true))}"></div>
-          ${drinkIcon(d, 52, ICON_STROKE.hero)}
-          ${d.pick ? `<span class="pick-pill pick-pill--sheet">${STRINGS.koosPick}</span>` : ''}
+          ${mediaInner(d, 52, true, d.pick ? `<span class="pick-pill pick-pill--sheet">${STRINGS.koosPick}</span>` : '')}
         </div>
         <div class="recipe-body">
           <div class="eyebrow">${esc(d.cat)}</div>
