@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0c0a08">
+<meta name="robots" content="noindex, nofollow">
+<title>Koo Private Bar</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23c8a35a'/%3E%3Ctext x='32' y='45' font-family='Georgia,serif' font-size='40' font-weight='600' fill='%23161009' text-anchor='middle'%3EK%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ============ DESIGN-TOKEN CONTRACT ============
+   Every colour, radius and motion value used anywhere in this app is defined
+   here once. No hex/rgba literals below this block except one-off gradients
+   that belong to a single component. */
+:root{
+  --ink:#0c0a08;            /* page / shell / top bar */
+  --ink-page:#050403;       /* behind the shell */
+  --splash-hi:#1a140d; --splash-lo:#0a0806;
+  --panel:#16130f;          /* cards, modal, toast, order rows */
+  --sheet-recipe:#12100c;
+  --sheet-order:#0e0c09;
+  --row-served:#100e0b;
+  --brass:#c8a35a; --brass-hi:#d9b978; --brass-lo:#b98d3f;
+  --cream:#efe7db;
+  --body-text:#b7ad9c;
+  --muted:#9a8f7d; --muted-deep:#8a7f6d; --tab-idle:#c9bfae;
+  --cta-ink:#161009;        /* text on brass */
+  --green:#7fa07a;          /* served */
+  --hairline:rgba(238,226,207,.07);
+  --row-line:rgba(238,226,207,.08);
+  --ring-07:rgba(255,240,210,.07); --ring-08:rgba(255,240,210,.08);
+  --ring-10:rgba(255,240,210,.1);  --ring-12:rgba(255,240,210,.12);
+  --ring-14:rgba(255,240,210,.14); --ring-20:rgba(255,240,210,.2);
+  --brass-ring:rgba(200,163,90,.28);
+  --brass-glow:rgba(200,163,90,.6);
+  --ring-06:rgba(255,240,210,.06);
+  --green-wash:rgba(127,160,122,.14);
+  --brass-line-45:rgba(200,163,90,.45); --brass-line-50:rgba(200,163,90,.5);
+  --brass-dim:rgba(200,163,90,.35);
+  --brass-wash:rgba(200,163,90,.14);
+  --font-display:'Cormorant Garamond',serif;
+  --font-ui:'Jost',sans-serif;
+  --ease-sheet:cubic-bezier(.2,.8,.2,1);
+  --radius-card:14px; --radius-modal:18px; --radius-thumb:9px; --radius-logo:11px;
+  --pad-side:22px;
+  --shell-max:460px;
+}
+@media (min-width:760px){ :root{ --shell-max:860px; } }
+
+*{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body{ margin:0; padding:0; background:var(--ink-page); }
+::-webkit-scrollbar{ width:0; height:0; }
+@keyframes kooUp{ from{ opacity:0; transform:translateY(18px);} to{ opacity:1; transform:none;} }
+@keyframes kooFade{ from{ opacity:0;} to{ opacity:1;} }
+
+#shell{ position:relative; width:100%; max-width:var(--shell-max); height:100vh; height:100dvh;
+  margin:0 auto; overflow:hidden; background:var(--ink); font-family:var(--font-ui);
+  box-shadow:0 0 80px -20px rgba(0,0,0,.6); display:flex; flex-direction:column; }
+
+/* ---- top bar ---- */
+.topbar{ flex:none; display:flex; align-items:center; gap:13px; padding:15px 20px 14px;
+  border-bottom:1px solid var(--hairline); background:var(--ink); z-index:6; }
+.logo-k{ flex:none; width:38px; height:38px; border-radius:var(--radius-logo);
+  background:linear-gradient(155deg,var(--brass-hi),var(--brass-lo));
+  box-shadow:0 4px 12px -4px var(--brass-glow), inset 0 1px 0 rgba(255,248,232,.5);
+  display:flex; align-items:center; justify-content:center; cursor:default;
+  user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
+.logo-letter{ font-family:var(--font-display); font-weight:600; font-size:24px; line-height:1;
+  color:var(--cta-ink); margin-top:1px; }
+.titleblock{ flex:1; min-width:0; line-height:1; }
+.bar-title{ font-family:var(--font-display); font-weight:600; font-size:22px; color:var(--cream); letter-spacing:.01em; }
+.bar-sub{ font-size:8.5px; letter-spacing:.32em; text-transform:uppercase; color:var(--muted-deep); margin-top:3px; }
+.host-badge{ flex:none; font-size:8.5px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--brass); border:1px solid var(--brass-line-50); padding:4px 8px; border-radius:999px; }
+
+/* ---- scroll area ---- */
+.scroll{ flex:1; overflow-y:auto; overflow-x:hidden; }
+.hero{ padding:24px var(--pad-side) 6px;
+  background:radial-gradient(120% 60% at 50% 0%, rgba(200,163,90,.12), transparent 62%); }
+.hero-eyebrow{ font-family:var(--font-display); font-style:italic; font-size:15px; color:var(--muted); }
+.hero-title{ font-family:var(--font-display); font-weight:500; font-size:36px; line-height:1.06; color:var(--cream); margin-top:2px; }
+.hero-sub{ font-size:12.5px; color:var(--muted); margin-top:10px; }
+
+/* ---- featured card ---- */
+.featured{ margin:18px var(--pad-side) 4px; border-radius:var(--radius-card); overflow:hidden;
+  position:relative; box-shadow:inset 0 0 0 1px var(--ring-08); cursor:pointer; }
+.featured-img{ height:186px; position:relative; display:flex; align-items:center; justify-content:center; }
+.tint{ position:absolute; inset:0; }
+.icon-rel{ position:relative; }
+.pick-pill{ position:absolute; font-size:9px; text-transform:uppercase; color:var(--cta-ink);
+  background:var(--brass); padding:4px 8px; border-radius:999px; }
+.pick-pill--featured{ top:12px; left:12px; letter-spacing:.2em; font-weight:500; }
+.pick-pill--sheet{ top:10px; left:10px; letter-spacing:.18em; }
+.featured-caption{ position:absolute; left:0; right:0; bottom:0; padding:15px 16px;
+  background:linear-gradient(180deg, transparent, rgba(10,8,6,.94)); }
+.featured-name{ font-family:var(--font-display); font-size:25px; color:var(--cream); line-height:1; }
+.featured-spec{ font-size:10px; letter-spacing:.15em; text-transform:uppercase; color:var(--brass); margin-top:7px; }
+
+/* ---- tabs / section ---- */
+.tabs{ position:sticky; top:0; z-index:5; background:var(--ink);
+  padding:14px var(--pad-side) 12px; display:flex; gap:8px; overflow-x:auto; }
+.tab{ font-size:12px; letter-spacing:.06em; color:var(--tab-idle); background:transparent;
+  padding:7px 14px; border-radius:999px; white-space:nowrap; cursor:pointer;
+  box-shadow:inset 0 0 0 1px var(--ring-12); }
+.tab.active{ color:var(--cta-ink); background:var(--brass); box-shadow:none; }
+.section-row{ padding:2px var(--pad-side) 0; display:flex; align-items:center; gap:12px; }
+.section-label{ font-size:11px; letter-spacing:.34em; text-transform:uppercase; color:var(--muted-deep); }
+.section-rule{ flex:1; height:1px; background:var(--ring-10); }
+
+/* ---- drink list ---- */
+.list{ padding:0 var(--pad-side) 130px; }
+@media (min-width:760px){
+  .list{ padding:4px var(--pad-side) 140px; display:grid; grid-template-columns:1fr 1fr; column-gap:26px; }
+}
+.row{ display:flex; gap:14px; padding:16px 2px; border-bottom:1px solid var(--row-line); cursor:pointer; }
+.thumb{ width:64px; height:82px; border-radius:var(--radius-thumb); flex:none; position:relative;
+  overflow:hidden; box-shadow:inset 0 0 0 1px var(--ring-07);
+  display:flex; align-items:center; justify-content:center; }
+.row-body{ flex:1; min-width:0; }
+.row-top{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+.row-name{ font-family:var(--font-display); font-size:21px; color:var(--cream); }
+.tag-pick{ font-size:8.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--brass);
+  border:1px solid var(--brass-line-45); padding:3px 7px; border-radius:999px; flex:none; }
+.row-spec{ font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin-top:4px; }
+.row-desc{ font-size:12.5px; color:var(--body-text); margin-top:7px; line-height:1.45; }
+
+/* ---- floating order button ---- */
+.float-wrap{ position:absolute; left:0; right:0; bottom:0; padding:16px var(--pad-side) 18px;
+  background:linear-gradient(180deg, transparent, rgba(12,10,8,.96) 45%);
+  display:flex; justify-content:center; z-index:7; pointer-events:none; }
+.order-btn{ display:flex; align-items:center; gap:10px; background:var(--brass); color:var(--cta-ink);
+  padding:13px 22px; border-radius:999px; font-size:13px; letter-spacing:.04em;
+  box-shadow:0 14px 30px -10px var(--brass-glow); cursor:pointer; pointer-events:auto; }
+.order-btn svg{ stroke:var(--cta-ink); }
+.order-btn-label{ font-weight:500; }
+.order-count{ background:var(--cta-ink); color:var(--brass); font-size:11px; padding:2px 8px; border-radius:999px; }
+
+/* ---- overlays ---- */
+.scrim{ position:absolute; inset:0; animation:kooFade .2s ease; }
+.scrim--recipe{ z-index:20; background:rgba(6,4,3,.6); }
+.scrim--order{ z-index:25; background:rgba(6,4,3,.62); }
+.modal-scrim{ position:absolute; inset:0; z-index:30; background:rgba(6,4,3,.68);
+  display:flex; align-items:center; justify-content:center; animation:kooFade .2s ease; }
+.sheet{ position:absolute; left:0; right:0; bottom:0; border-radius:22px 22px 0 0;
+  box-shadow:0 -20px 50px -10px rgba(0,0,0,.6), inset 0 1px 0 var(--ring-08);
+  animation:kooUp .28s var(--ease-sheet); }
+.sheet--recipe{ top:58px; z-index:21; background:var(--sheet-recipe); overflow:hidden; }
+.sheet--order{ top:80px; z-index:26; background:var(--sheet-order); overflow-y:auto; }
+.sheet-scroll{ height:100%; overflow-y:auto; }
+.handle-row{ position:sticky; top:0; background:var(--sheet-recipe); padding-top:12px; z-index:2; }
+.handle{ width:40px; height:4px; border-radius:999px; background:var(--ring-20); margin:0 auto; }
+
+/* recipe sheet */
+.recipe-hero{ height:172px; margin:14px 16px 0; border-radius:var(--radius-card); position:relative;
+  overflow:hidden; box-shadow:inset 0 0 0 1px var(--ring-07);
+  display:flex; align-items:center; justify-content:center; }
+.recipe-body{ padding:16px 18px 120px; }
+.eyebrow{ font-size:10px; letter-spacing:.3em; text-transform:uppercase; color:var(--muted-deep); }
+.recipe-name{ font-family:var(--font-display); font-size:31px; color:var(--cream); line-height:1; margin-top:5px; }
+.recipe-desc{ font-size:12.5px; color:var(--body-text); margin-top:9px; line-height:1.5; }
+.pour-head{ margin:22px 0 10px; }
+.pour-list{ display:flex; flex-direction:column; gap:8px; }
+.pour-row{ display:flex; justify-content:space-between; font-size:11px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--tab-idle); border-bottom:1px solid var(--ring-07); padding-bottom:8px; }
+.pour-amt{ color:var(--muted-deep); }
+.tasting-note{ font-size:13px; color:var(--tab-idle); line-height:1.55;
+  font-family:var(--font-display); font-style:italic; }
+.served-line{ margin-top:14px; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted-deep); }
+.sheet-cta-wrap{ position:absolute; left:0; right:0; bottom:0; padding:16px 18px 18px;
+  background:linear-gradient(180deg, transparent, var(--sheet-recipe) 42%); pointer-events:none; }
+.cta-add{ display:flex; align-items:center; justify-content:center; gap:9px; background:var(--brass);
+  color:var(--cta-ink); padding:15px; border-radius:var(--radius-card); font-size:13.5px;
+  letter-spacing:.03em; font-weight:500; cursor:pointer; pointer-events:auto; }
+
+/* name prompt */
+.modal{ width:82%; max-width:340px; background:var(--panel); border-radius:var(--radius-modal);
+  box-shadow:0 30px 60px -20px rgba(0,0,0,.7), inset 0 1px 0 var(--ring-08);
+  padding:24px 20px; animation:kooUp .25s var(--ease-sheet); }
+.modal-name{ font-family:var(--font-display); font-size:25px; color:var(--cream); text-align:center; }
+.modal-q{ font-size:11.5px; color:var(--muted); text-align:center; margin-top:4px; }
+.name-input{ width:100%; margin-top:18px; background:var(--ink); border:none; outline:none;
+  border-radius:11px; box-shadow:inset 0 0 0 1px var(--ring-14); padding:14px; font-size:15px;
+  color:var(--cream); font-family:var(--font-ui); }
+.chips{ display:flex; gap:7px; flex-wrap:wrap; margin-top:12px; }
+.chip{ font-size:11px; color:var(--tab-idle); padding:6px 11px; border-radius:999px;
+  box-shadow:inset 0 0 0 1px var(--ring-12); cursor:pointer; }
+.modal-confirm{ margin-top:18px; display:flex; align-items:center; justify-content:center;
+  background:var(--brass); color:var(--cta-ink); padding:13px; border-radius:12px;
+  font-size:13px; letter-spacing:.03em; font-weight:500; cursor:pointer; }
+.modal-confirm.disabled{ background:var(--brass-dim); }
+.modal-cancel{ text-align:center; margin-top:12px; font-size:11.5px; color:var(--muted-deep); cursor:pointer; }
+
+/* order sheet */
+.order-head{ position:sticky; top:0; background:var(--sheet-order); padding:12px 20px 14px; z-index:2; }
+.order-head .handle{ margin:0 auto 14px; }
+.order-title-row{ display:flex; align-items:center; justify-content:space-between; }
+.order-title{ font-family:var(--font-display); font-size:27px; color:var(--cream); }
+.order-close{ font-size:22px; color:var(--muted-deep); cursor:pointer; line-height:1; }
+.order-summary{ font-size:11.5px; color:var(--muted-deep); margin-top:4px; }
+.newnight{ margin-top:10px; display:inline-flex; align-items:center; gap:7px; font-size:10px;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--brass);
+  border:1px solid var(--brass-line-45); padding:6px 11px; border-radius:999px; cursor:pointer; }
+.newnight.confirm{ background:var(--brass); color:var(--cta-ink); border-color:var(--brass); }
+.order-body{ padding:0 16px 40px; display:flex; flex-direction:column; gap:9px; }
+.order-empty{ text-align:center; padding:60px 20px; color:var(--muted-deep); font-size:13px;
+  font-family:var(--font-display); font-style:italic; }
+.order-row{ background:var(--panel); border-radius:var(--radius-card); padding:14px;
+  box-shadow:inset 0 0 0 1px var(--ring-06); }
+.order-row--making{ box-shadow:inset 0 0 0 1px var(--brass-ring); }
+.order-row--served{ background:var(--row-served); opacity:.55; }
+.order-row-top{ display:flex; justify-content:space-between; align-items:center; }
+.order-name{ font-family:var(--font-display); font-size:19px; color:var(--cream); }
+.order-row--served .order-name{ text-decoration:line-through; }
+.order-for{ font-size:11px; color:var(--muted); margin-top:2px; }
+.order-side{ display:flex; align-items:center; gap:8px; }
+.status-pill{ font-size:9px; letter-spacing:.14em; text-transform:uppercase; padding:5px 9px;
+  border-radius:999px; white-space:nowrap; }
+.status-pill--queued{ color:var(--muted); background:var(--ring-06); }
+.status-pill--making{ color:var(--brass); background:var(--brass-wash); }
+.status-pill--served{ color:var(--green); background:var(--green-wash); }
+.order-x{ font-size:16px; color:var(--muted-deep); cursor:pointer; line-height:1; }
+.order-action{ margin-top:12px; display:flex; align-items:center; justify-content:center; gap:8px;
+  background:var(--brass); color:var(--cta-ink); padding:9px; border-radius:9px;
+  font-size:11.5px; letter-spacing:.04em; font-weight:500; cursor:pointer; }
+.version-line{ text-align:center; padding:14px 0 0; font-size:9px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--muted-deep); opacity:.7; }
+
+/* splash */
+.splash{ position:absolute; inset:0; z-index:40;
+  background:radial-gradient(120% 70% at 50% 20%, var(--splash-hi), var(--splash-lo) 68%);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; padding:0 30px; cursor:pointer; animation:kooFade .5s ease; }
+.wordmark{ display:flex; align-items:center; gap:10px; margin-bottom:34px;
+  user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
+.wordmark-dot{ width:6px; height:6px; border-radius:50%; background:var(--brass); }
+.wordmark-text{ font-size:11px; letter-spacing:.44em; text-transform:uppercase; color:var(--brass); padding-left:.44em; }
+.splash-eyebrow{ font-family:var(--font-display); font-style:italic; font-size:19px; color:var(--muted); }
+.splash-title{ font-family:var(--font-display); font-weight:500; font-size:52px; line-height:1.02;
+  color:var(--cream); margin-top:6px; }
+.splash-cta{ margin-top:46px; display:flex; align-items:center; gap:9px; font-size:11px;
+  letter-spacing:.24em; text-transform:uppercase; color:var(--muted-deep); }
+.splash-cta-arrow{ font-size:15px; }
+
+/* toast */
+.toast-wrap{ position:absolute; left:0; right:0; bottom:96px; z-index:50;
+  display:flex; justify-content:center; pointer-events:none; }
+.toast{ background:var(--panel); color:var(--cream); font-size:12.5px; padding:11px 18px;
+  border-radius:999px; box-shadow:0 14px 30px -10px rgba(0,0,0,.7), inset 0 0 0 1px rgba(200,163,90,.4);
+  animation:kooUp .25s ease; }
+
+[hidden]{ display:none !important; }
+</style>
+</head>
+<body>
+<div id="shell">
+
+  <header class="topbar">
+    <span id="logoK" class="logo-k"><span class="logo-letter">K</span></span>
+    <div class="titleblock">
+      <div class="bar-title">Koo Private Bar</div>
+      <div class="bar-sub">Cocktails · Coffee · Whisky</div>
+    </div>
+    <span id="hostBadge" class="host-badge" hidden>Host</span>
+  </header>
+
+  <main class="scroll" id="scrollArea">
+    <div class="hero">
+      <div class="hero-eyebrow">Good evening.</div>
+      <div id="greeting" class="hero-title"></div>
+      <div class="hero-sub">Six seats, one bar — whatever you’re having.</div>
+    </div>
+    <div id="featured"></div>
+    <nav id="tabs" class="tabs"></nav>
+    <div class="section-row">
+      <span id="sectionLabel" class="section-label"></span>
+      <span class="section-rule"></span>
+    </div>
+    <div id="list" class="list"></div>
+  </main>
+
+  <div id="floatWrap" class="float-wrap" hidden>
+    <div class="order-btn" onclick="App.toggleOrder(true)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round"><path d="M6 6h15l-1.5 9h-12z"/><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M6 6 5 3H2"/></svg>
+      <span class="order-btn-label">Your order</span>
+      <span id="orderCount" class="order-count" hidden>0</span>
+    </div>
+  </div>
+
+  <div id="overlayRecipe"></div>
+  <div id="overlayName"></div>
+  <div id="overlayOrder"></div>
+
+  <div id="splash" class="splash" onclick="App.enter()">
+    <div id="wordmark" class="wordmark">
+      <span class="wordmark-dot"></span>
+      <span class="wordmark-text">Koo Private Bar</span>
+      <span class="wordmark-dot"></span>
+    </div>
+    <div class="splash-eyebrow">Good evening.</div>
+    <div class="splash-title">Come in — what<br>are we having?</div>
+    <div class="splash-cta">Tap to enter <span class="splash-cta-arrow">→</span></div>
+  </div>
+
+  <div id="toastWrap" class="toast-wrap" hidden><div id="toast" class="toast"></div></div>
+
+</div>
+
+<script>
+'use strict';
+const APP_VERSION = '1.0.0';
+const CONFIG = {
+  // Phase 2: paste the Apps Script Web App URL here to switch the queue from
+  // this-device-only (localStorage) to shared-across-devices.
+  ORDERS_API_URL: '',
+  POLL_MS: 5000,
+};
+const LP_MS = 650;              // host-mode long-press duration
+const TOAST_MS = 2200;
+const LS = { orders:'koo_orders', names:'koo_names', host:'koo_host' };
+
+const STRINGS = {
+  koosPick: 'Koo’s Pick',
+  addToOrder: 'Add to Order',
+  emptyQueue: 'Nothing ordered yet.<br>Tap a drink, then “Add to Order”.',
+  nightYoung: 'The night is young.',
+  hostOn: 'Host mode on', hostOff: 'Host mode off',
+  newNight: 'New night', newNightConfirm: 'Tap again to clear',
+  nightCleared: 'Fresh night — queue cleared',
+  servedLine: 'neat, or over one large cube',
+  close: '×',
+  greetingFallback: 'What are we having tonight?',
+  menuFail: 'The menu isn’t loading right now.<br>Tap here to retry.',
+  orderSyncFail: 'Couldn’t reach the bar — tap the order again',
+};
+const ICON_STROKE = { list:'rgba(255,240,210,.3)', hero:'rgba(255,240,210,.26)' };
+// single source for the order lifecycle: rank drives sort, next drives advance
+const STATUS = {
+  making:{ rank:0, label:'Making', cls:'making', action:'✓ Mark served', next:'served' },
+  queued:{ rank:1, label:'Queued', cls:'queued', action:'Start making', next:'making' },
+  served:{ rank:2, label:'Served', cls:'served', action:null,           next:'served' },
+};
+
+const TABS = [
+  { key:'Cocktails',        label:'Cocktails' },
+  { key:'Coffee & Tea',     label:'Coffee & Tea' },
+  { key:'Mocktails & More', label:'Mocktails' },
+  { key:'Whisky',           label:'Whisky' },
+];
+
+/* ---------- state ---------- */
+const S = {
+  activeTab:'Cocktails', selected:null, namePrompt:null, nameInput:'',
+  recentNames:[], orderOpen:false, host:false, confirmClear:false,
+};
+let DRINKS = [];
+let store = null;
+let lastName = '';
+let toastTimer = null, clearConfirmTimer = null;
+
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => s == null ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+const attrId = id => String(id).replace(/[^\w-]/g, '');   // order ids inlined into onclick
+const sameId = (a, b) => String(a) === String(b);         // ids may come back as strings from the backend
+const newOrderId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+const countActive = orders => orders.filter(o => o.status !== 'served').length;
+const advanceIn = (orders, id) => orders.map(o => sameId(o.id, id) ? { ...o, status: (STATUS[o.status] || STATUS.queued).next } : o);
+const removeIn = (orders, id) => orders.filter(o => !sameId(o.id, id));
+function loadLocal(key){ try{ return localStorage.getItem(key); }catch(e){ return null; } }
+function loadOrdersArray(){ try{ const p = JSON.parse(loadLocal(LS.orders) || '[]'); return Array.isArray(p) ? p : []; }catch(e){ return []; } }
+// bounded fetch: one hung request must not freeze the queue (Phase-2 remote store)
+function fetchT(url, opts, ms){
+  const c = new AbortController();
+  const t = setTimeout(() => c.abort(), ms || 8000);
+  return fetch(url, Object.assign({ signal: c.signal }, opts)).finally(() => clearTimeout(t));
+}
+
+function tintBg(tint, big){
+  const stop = big ? '74%' : '66%';
+  const under = big ? 'linear-gradient(180deg,#1c1712,#0f0b08)' : 'linear-gradient(180deg,#1c1813,#100d0a)';
+  return `background:radial-gradient(110% 100% at 50% 130%, ${tint}, transparent ${stop}), ${under};`;
+}
+function drinkIcon(d, size, stroke){
+  const attrs = `width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width=".8" stroke-linecap="round" class="icon-rel"`;
+  return d.isWhisky
+    ? `<svg ${attrs}><path d="M6 8h12l-1 11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 8Z"/><path d="M7 13h10"/></svg>`
+    : `<svg ${attrs}><path d="M4 5h16M6 5c0 4 2.7 6 6 6s6-2 6-6M12 11v7M8 18h8"/></svg>`;
+}
+function flashToast(msg){
+  if (toastTimer) clearTimeout(toastTimer);
+  $('toast').textContent = msg;
+  $('toastWrap').hidden = false;
+  toastTimer = setTimeout(() => { $('toastWrap').hidden = true; }, TOAST_MS);
+}
+function saveLocal(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
+
+/* ---------- orders store (swappable: local now, Apps Script in Phase 2) ---------- */
+function makeLocalStore(onChange){
+  let orders = loadOrdersArray();
+  const save = () => { saveLocal(LS.orders, JSON.stringify(orders)); onChange(orders); };
+  return {
+    mode:'local',
+    start(){ onChange(orders); },
+    add(o){ orders = [...orders, o]; save(); },
+    advance(id){ orders = advanceIn(orders, id); save(); },
+    remove(id){ orders = removeIn(orders, id); save(); },
+    clearNight(){ orders = []; save(); },
+  };
+}
+function makeRemoteStore(onChange){
+  let orders = [];
+  let seq = 0;        // stale list responses (out-of-order resolution) are dropped
+  let inflight = 0;   // while a write is pending, polls must not clobber optimistic state
+  async function refresh(){
+    const mySeq = ++seq;
+    try{
+      const r = await fetchT(CONFIG.ORDERS_API_URL + '?action=list');
+      if (!r.ok) throw new Error('list HTTP ' + r.status);
+      const j = await r.json();
+      if (mySeq !== seq || inflight > 0) return;
+      orders = Array.isArray(j.orders) ? j.orders : [];
+      onChange(orders);
+    }catch(e){ console.warn('orders refresh failed', e); }
+  }
+  // text/plain avoids a CORS preflight, which Apps Script web apps don't answer
+  async function post(payload){
+    inflight++;
+    try{
+      const r = await fetchT(CONFIG.ORDERS_API_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify(payload) });
+      if (!r.ok) throw new Error('post HTTP ' + r.status);
+    }catch(e){ console.warn('orders post failed', e); flashToast(STRINGS.orderSyncFail); }
+    finally{ inflight--; }
+    if (inflight === 0) refresh();
+  }
+  const optimistic = fn => { orders = fn(orders); onChange(orders); };
+  return {
+    mode:'remote',
+    start(){ refresh(); setInterval(refresh, CONFIG.POLL_MS); },
+    add(o){ optimistic(os => [...os, o]); post({ action:'add', order:o }); },
+    advance(id){ optimistic(os => advanceIn(os, id)); post({ action:'advance', id }); },
+    remove(id){ optimistic(os => removeIn(os, id)); post({ action:'remove', id }); },
+    clearNight(){ optimistic(() => []); post({ action:'clearNight' }); },
+  };
+}
+/* ---------- renderers ---------- */
+let ORDERS = [];   // latest snapshot from the store, single source for all order UI
+let lastOrdersJson = null;
+function onOrders(orders){
+  const json = JSON.stringify(orders);
+  if (json === lastOrdersJson) return;   // poll tick with no change: don't disturb the DOM
+  lastOrdersJson = json;
+  ORDERS = orders;
+  renderFloatCount();
+  if (S.orderOpen){
+    const prev = document.querySelector('.sheet--order');
+    const scrollTop = prev ? prev.scrollTop : 0;
+    renderOrderSheet();
+    const next = document.querySelector('.sheet--order');
+    if (next) next.scrollTop = scrollTop;
+  }
+}
+
+function renderTabs(){
+  $('tabs').innerHTML = TABS.map((t, i) =>
+    `<span class="tab${t.key === S.activeTab ? ' active' : ''}" onclick="App.setTab(${i})">${esc(t.label)}</span>`
+  ).join('');
+  $('sectionLabel').textContent = S.activeTab;
+}
+function renderFeatured(){
+  const idx = DRINKS.findIndex(d => d.cat === S.activeTab && d.pick);
+  if (idx < 0){ $('featured').innerHTML = ''; return; }
+  const d = DRINKS[idx];
+  $('featured').innerHTML =
+    `<div class="featured" onclick="App.open(${idx})">
+      <div class="featured-img">
+        <div class="tint" style="${esc(tintBg(d.tint, true))}"></div>
+        ${drinkIcon(d, 56, ICON_STROKE.hero)}
+        <span class="pick-pill pick-pill--featured">${STRINGS.koosPick}</span>
+      </div>
+      <div class="featured-caption">
+        <div class="featured-name">${esc(d.name)}</div>
+        <div class="featured-spec">${esc(d.spec)}</div>
+      </div>
+    </div>`;
+}
+function renderList(){
+  if (menuFailed){
+    $('list').innerHTML = `<div class="order-empty" style="cursor:pointer;" onclick="location.reload()">${STRINGS.menuFail}</div>`;
+    return;
+  }
+  $('list').innerHTML = DRINKS.map((d, i) => ({ d, i }))
+    .filter(x => x.d.cat === S.activeTab)
+    .map(({ d, i }) =>
+      `<div class="row" onclick="App.open(${i})">
+        <div class="thumb">
+          <div class="tint" style="${esc(tintBg(d.tint, false))}"></div>
+          ${drinkIcon(d, d.isWhisky ? 24 : 26, ICON_STROKE.list)}
+        </div>
+        <div class="row-body">
+          <div class="row-top">
+            <span class="row-name">${esc(d.name)}</span>
+            ${d.pick ? `<span class="tag-pick">${STRINGS.koosPick}</span>` : ''}
+          </div>
+          <div class="row-spec">${esc(d.spec)}</div>
+          <div class="row-desc">${esc(d.desc)}</div>
+        </div>
+      </div>`
+    ).join('');
+}
+function renderMenu(){ renderTabs(); renderFeatured(); renderList(); }
+
+function renderRecipe(){
+  const d = S.selected;
+  if (!d){ $('overlayRecipe').innerHTML = ''; return; }
+  const body = d.isWhisky
+    ? `<div class="eyebrow pour-head">Tasting</div>
+       <div class="tasting-note">${esc(d.note || '')}</div>
+       <div class="served-line">Served — ${STRINGS.servedLine}</div>`
+    : `<div class="eyebrow pour-head">Pour</div>
+       <div class="pour-list">
+         ${(Array.isArray(d.pour) ? d.pour : []).map(p => `<div class="pour-row"><span>${esc(p.name)}</span><span class="pour-amt">${esc(p.amt)}</span></div>`).join('')}
+       </div>`;
+  $('overlayRecipe').innerHTML =
+    `<div class="scrim scrim--recipe" onclick="App.closeSheet()"></div>
+    <div class="sheet sheet--recipe">
+      <div class="sheet-scroll">
+        <div class="handle-row"><div class="handle"></div></div>
+        <div class="recipe-hero">
+          <div class="tint" style="${esc(tintBg(d.tint, true))}"></div>
+          ${drinkIcon(d, 52, ICON_STROKE.hero)}
+          ${d.pick ? `<span class="pick-pill pick-pill--sheet">${STRINGS.koosPick}</span>` : ''}
+        </div>
+        <div class="recipe-body">
+          <div class="eyebrow">${esc(d.cat)}</div>
+          <div class="recipe-name">${esc(d.name)}</div>
+          <div class="recipe-desc">${esc(d.desc)}</div>
+          ${body}
+        </div>
+      </div>
+      <div class="sheet-cta-wrap">
+        <div class="cta-add" onclick="App.addFromSheet()">${STRINGS.addToOrder}</div>
+      </div>
+    </div>`;
+}
+
+function renderNamePrompt(){
+  const d = S.namePrompt;
+  if (!d){ $('overlayName').innerHTML = ''; return; }
+  const chips = S.recentNames.length
+    ? `<div class="chips">${S.recentNames.map((n, i) => `<span class="chip" onclick="App.pickName(${i})">${esc(n)}</span>`).join('')}</div>`
+    : '';
+  $('overlayName').innerHTML =
+    `<div class="modal-scrim" onclick="App.cancelName()">
+      <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-name">${esc(d.name)}</div>
+        <div class="modal-q">Whose drink is this?</div>
+        <input id="nameInput" class="name-input" placeholder="Add a name" value="${esc(S.nameInput)}"
+          oninput="App.onNameInput(this)" onkeydown="if(event.key==='Enter')App.confirmName()">
+        ${chips}
+        <div id="confirmBtn" class="modal-confirm${S.nameInput.trim() ? '' : ' disabled'}" onclick="App.confirmName()">${STRINGS.addToOrder}</div>
+        <div class="modal-cancel" onclick="App.cancelName()">Cancel</div>
+      </div>
+    </div>`;
+}
+
+function renderOrderSheet(){
+  if (!S.orderOpen){ $('overlayOrder').innerHTML = ''; return; }
+  const idx = ORDERS.reduce((m, o, i) => (m[o.id] = i, m), {});   // insertion order for the sort tiebreak
+  const sorted = [...ORDERS].sort((a, b) => (STATUS[a.status].rank - STATUS[b.status].rank) || (idx[a.id] - idx[b.id]));
+  const active = countActive(ORDERS);
+  const made = ORDERS.length - active;
+  const summary = ORDERS.length === 0 ? STRINGS.nightYoung : `${active} in the queue · ${made} made`;
+
+  const rows = sorted.map(o => {
+    const m = STATUS[o.status] || STATUS.queued;
+    const oid = attrId(o.id);
+    return `<div class="order-row order-row--${m.cls}">
+      <div class="order-row-top">
+        <div>
+          <span class="order-name">${esc(o.drink)}</span>
+          <div class="order-for">for ${esc(o.person)}</div>
+        </div>
+        <div class="order-side">
+          <span class="status-pill status-pill--${m.cls}">${m.label}</span>
+          ${S.host ? `<span class="order-x" onclick="App.remove('${oid}')">${STRINGS.close}</span>` : ''}
+        </div>
+      </div>
+      ${S.host && m.action ? `<div class="order-action" onclick="App.advance('${oid}')">${m.action}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  const newNight = S.host && ORDERS.length
+    ? `<div class="newnight${S.confirmClear ? ' confirm' : ''}" onclick="App.newNight()">${S.confirmClear ? STRINGS.newNightConfirm : STRINGS.newNight}</div>`
+    : '';
+  const version = S.host
+    ? `<div class="version-line">v${APP_VERSION} · ${store && store.mode === 'remote' ? 'shared queue' : 'this device only'}</div>`
+    : '';
+
+  $('overlayOrder').innerHTML =
+    `<div class="scrim scrim--order" onclick="App.toggleOrder(false)"></div>
+    <div class="sheet sheet--order">
+      <div class="order-head">
+        <div class="handle"></div>
+        <div class="order-title-row">
+          <div class="order-title">Tonight’s bar</div>
+          <span class="order-close" onclick="App.toggleOrder(false)">${STRINGS.close}</span>
+        </div>
+        <div class="order-summary">${summary}</div>
+        ${newNight}
+      </div>
+      <div class="order-body">
+        ${ORDERS.length === 0 ? `<div class="order-empty">${STRINGS.emptyQueue}</div>` : rows}
+        ${version}
+      </div>
+    </div>`;
+}
+
+function renderFloatCount(){
+  const active = countActive(ORDERS);
+  $('orderCount').textContent = active;
+  $('orderCount').hidden = active === 0;
+}
+function renderHostBadge(){ $('hostBadge').hidden = !S.host; }
+
+/* ---------- host-mode long press ---------- */
+function toggleHost(){
+  S.host = !S.host;
+  saveLocal(LS.host, S.host ? '1' : '0');
+  renderHostBadge();
+  if (S.orderOpen) renderOrderSheet();
+  flashToast(S.host ? STRINGS.hostOn : STRINGS.hostOff);
+}
+function attachLongPress(el){
+  // per-element state; handles touch→mouse compat events, moved fingers, multi-touch
+  let timer = null, fired = false, resetT = null, touchActive = false, sx = 0, sy = 0;
+  const start = () => {
+    if (timer) return;                       // a second pointer must not restart the press
+    fired = false; clearTimeout(resetT);
+    timer = setTimeout(() => { fired = true; toggleHost(); }, LP_MS);
+  };
+  const end = () => {
+    if (timer){ clearTimeout(timer); timer = null; }
+    // if the press fired but no click follows (e.g. mouseleave), don't eat the NEXT tap
+    if (fired){ clearTimeout(resetT); resetT = setTimeout(() => { fired = false; }, 350); }
+  };
+  el.addEventListener('touchstart', e => { touchActive = true; const t = e.touches[0]; if (t){ sx = t.clientX; sy = t.clientY; } start(); }, { passive:true });
+  // cancel only on real movement (scroll) — a still finger jitters a few px during a legit press
+  el.addEventListener('touchmove', e => { const t = e.touches[0]; if (t && Math.hypot(t.clientX - sx, t.clientY - sy) > 12) end(); }, { passive:true });
+  el.addEventListener('touchend', e => {
+    end();
+    if (fired) e.preventDefault();           // suppress the compat mousedown/mouseup/click
+    setTimeout(() => { touchActive = false; }, 500);
+  });
+  el.addEventListener('touchcancel', () => { end(); touchActive = false; });
+  el.addEventListener('mousedown', () => { if (!touchActive) start(); });
+  el.addEventListener('mouseup', end);
+  el.addEventListener('mouseleave', end);
+  // a completed long-press must not also count as a tap (e.g. enter the splash)
+  el.addEventListener('click', e => {
+    if (fired){ fired = false; clearTimeout(resetT); e.stopPropagation(); e.preventDefault(); }
+  }, true);
+}
+
+/* ---------- actions (inline handlers) ---------- */
+const App = {
+  enter(){ $('splash').hidden = true; $('floatWrap').hidden = false; },
+  setTab(i){ S.activeTab = TABS[i].key; renderMenu(); },
+  open(i){ S.selected = DRINKS[i]; renderRecipe(); },
+  closeSheet(){ S.selected = null; renderRecipe(); },
+  addFromSheet(){
+    S.namePrompt = S.selected; S.selected = null; S.nameInput = lastName || '';
+    renderRecipe(); renderNamePrompt();
+  },
+  onNameInput(el){
+    S.nameInput = el.value;
+    $('confirmBtn').classList.toggle('disabled', !S.nameInput.trim());
+  },
+  pickName(i){
+    S.nameInput = S.recentNames[i];
+    $('nameInput').value = S.nameInput;
+    $('confirmBtn').classList.remove('disabled');
+  },
+  confirmName(){
+    const person = (S.nameInput || '').trim();
+    if (!person || !S.namePrompt) return;
+    const d = S.namePrompt;
+    store.add({ id: newOrderId(), drink: d.name, cat: d.cat, person, status:'queued' });
+    S.recentNames = [person, ...S.recentNames.filter(n => n.toLowerCase() !== person.toLowerCase())].slice(0, 6);
+    saveLocal(LS.names, JSON.stringify(S.recentNames));
+    lastName = person;
+    S.namePrompt = null; S.nameInput = '';
+    renderNamePrompt();
+    flashToast(`${person}’s ${d.name} — added`);
+  },
+  cancelName(){ S.namePrompt = null; S.nameInput = ''; renderNamePrompt(); },
+  toggleOrder(open){ S.orderOpen = open; S.confirmClear = false; renderOrderSheet(); },
+  advance(id){ store.advance(id); },
+  remove(id){ store.remove(id); },
+  newNight(){
+    if (!S.confirmClear){
+      S.confirmClear = true; renderOrderSheet();
+      if (clearConfirmTimer) clearTimeout(clearConfirmTimer);
+      clearConfirmTimer = setTimeout(() => { S.confirmClear = false; if (S.orderOpen) renderOrderSheet(); }, 3000);
+      return;
+    }
+    if (clearConfirmTimer) clearTimeout(clearConfirmTimer);
+    S.confirmClear = false;
+    store.clearNight();
+    flashToast(STRINGS.nightCleared);
+  },
+};
+
+/* ---------- boot ---------- */
+let menuFailed = false;
+async function boot(){
+  try{ S.recentNames = JSON.parse(loadLocal(LS.names) || '[]'); }catch(e){ S.recentNames = []; }
+  if (!Array.isArray(S.recentNames)) S.recentNames = [];
+  S.host = loadLocal(LS.host) === '1';
+  lastName = S.recentNames[0] || '';
+  renderHostBadge();
+
+  try{
+    const res = await fetch('drinks.json', { cache:'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    DRINKS = Array.isArray(data.drinks) ? data.drinks : [];
+    if (!DRINKS.length) throw new Error('no drinks in drinks.json');
+    $('greeting').textContent = (data.config && data.config.greeting) || STRINGS.greetingFallback;
+    DRINKS.forEach(d => {
+      if (!TABS.some(t => t.key === d.cat)) console.warn(`drink "${d.name}" has unknown category "${d.cat}" — it will not appear on any tab`);
+    });
+  }catch(e){
+    console.warn('menu load failed', e);
+    menuFailed = true;
+    $('greeting').textContent = STRINGS.greetingFallback;
+  }
+  renderMenu();
+
+  store = CONFIG.ORDERS_API_URL ? makeRemoteStore(onOrders) : makeLocalStore(onOrders);
+  store.start();
+
+  attachLongPress($('logoK'));
+  attachLongPress($('wordmark'));
+}
+boot();
+</script>
+</body>
+</html>
