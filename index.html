@@ -127,6 +127,11 @@ html,body{ margin:0; padding:0; background:var(--ink-page); }
   border:1px solid var(--brass-line-45); padding:3px 7px; border-radius:999px; flex:none; }
 .row-spec{ font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin-top:4px; }
 .row-desc{ font-size:12.5px; color:var(--body-text); margin-top:7px; line-height:1.45; }
+/* cellar-list (tasting) rows: slim colour accent instead of a photo thumbnail */
+.row--cellar{ gap:13px; }
+.cellar-accent{ width:3px; border-radius:2px; flex:none; }
+.cellar-meta{ display:flex; align-items:baseline; gap:8px; flex:none; }
+.cellar-abv{ font-size:11px; letter-spacing:.12em; color:var(--muted-deep); white-space:nowrap; }
 
 /* ---- floating order button ---- */
 .float-wrap{ position:absolute; left:0; right:0; bottom:0; padding:16px var(--pad-side) 18px;
@@ -169,6 +174,7 @@ html,body{ margin:0; padding:0; background:var(--ink-page); }
 .pour-amt{ color:var(--muted-deep); }
 .tasting-note{ font-size:13px; color:var(--tab-idle); line-height:1.55;
   font-family:var(--font-display); font-style:italic; }
+.recipe-tasting{ font-size:15px; margin-top:12px; }
 .served-line{ margin-top:14px; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted-deep); }
 .sheet-cta-wrap{ position:absolute; left:0; right:0; bottom:0; padding:16px 18px 18px;
   background:linear-gradient(180deg, transparent, var(--sheet-recipe) 42%);
@@ -489,7 +495,16 @@ function renderTabs(){
   ).join('');
   $('sectionLabel').textContent = S.activeTab;
 }
+// a category's layout: 'recipe' (photo + pour list) or 'tasting' (cellar list, no photo).
+// Driven by the tab's `style` in drinks.json, so adding a tasting category (white wine,
+// sparkling, sake…) is a pure JSON edit.
+function catStyle(cat){ const t = TABS.find(x => x.key === cat); return (t && t.style) || 'recipe'; }
+function tastingEyebrow(d){ const p = [d.region, d.type].filter(Boolean); return p.length ? p.join(' · ') : (d.spec || ''); }
+function attrRow(label, val){ return val ? `<div class="pour-row"><span>${esc(label)}</span><span class="pour-amt">${esc(val)}</span></div>` : ''; }
+
 function renderFeatured(){
+  // cellar-list (tasting) categories have no photo hero card
+  if (catStyle(S.activeTab) === 'tasting'){ $('featured').innerHTML = ''; return; }
   const idx = DRINKS.findIndex(d => d.cat === S.activeTab && d.pick);
   if (idx < 0){ $('featured').innerHTML = ''; return; }
   const d = DRINKS[idx];
@@ -504,39 +519,65 @@ function renderFeatured(){
       </div>
     </div>`;
 }
+function recipeRow(d, i){
+  return `<div class="row" onclick="App.open(${i})">
+    <div class="thumb">${mediaInner(d, 26, false, '')}</div>
+    <div class="row-body">
+      <div class="row-top">
+        <span class="row-name">${esc(d.name)}</span>
+        ${d.pick ? `<span class="tag-pick">${STRINGS.koosPick}</span>` : ''}
+      </div>
+      <div class="row-spec">${esc(d.spec)}</div>
+      <div class="row-desc">${esc(d.desc)}</div>
+    </div>
+  </div>`;
+}
+function cellarRow(d, i){
+  return `<div class="row row--cellar" onclick="App.open(${i})">
+    <div class="cellar-accent" style="background:${esc(d.tint || 'rgba(200,163,90,.6)')}"></div>
+    <div class="row-body">
+      <div class="row-top">
+        <span class="row-name">${esc(d.name)}</span>
+        <span class="cellar-meta">
+          ${d.pick ? `<span class="tag-pick">${STRINGS.koosPick}</span>` : ''}
+          ${d.abv ? `<span class="cellar-abv">${esc(d.abv)}</span>` : ''}
+        </span>
+      </div>
+      <div class="row-spec">${esc(tastingEyebrow(d))}</div>
+      ${d.note ? `<div class="row-desc">${esc(d.note)}</div>` : ''}
+    </div>
+  </div>`;
+}
 function renderList(){
   if (menuFailed){
     $('list').innerHTML = `<div class="order-empty" style="cursor:pointer;" onclick="location.reload()">${STRINGS.menuFail}</div>`;
     return;
   }
+  const tasting = catStyle(S.activeTab) === 'tasting';
   $('list').innerHTML = DRINKS.map((d, i) => ({ d, i }))
     .filter(x => x.d.cat === S.activeTab)
-    .map(({ d, i }) =>
-      `<div class="row" onclick="App.open(${i})">
-        <div class="thumb">
-          ${mediaInner(d, d.isWhisky ? 24 : 26, false, '')}
-        </div>
-        <div class="row-body">
-          <div class="row-top">
-            <span class="row-name">${esc(d.name)}</span>
-            ${d.pick ? `<span class="tag-pick">${STRINGS.koosPick}</span>` : ''}
-          </div>
-          <div class="row-spec">${esc(d.spec)}</div>
-          <div class="row-desc">${esc(d.desc)}</div>
-        </div>
-      </div>`
-    ).join('');
+    .map(({ d, i }) => tasting ? cellarRow(d, i) : recipeRow(d, i)).join('');
 }
 function renderMenu(){ renderTabs(); renderFeatured(); renderList(); }
 
 function renderRecipe(){
   const d = S.selected;
   if (!d){ $('overlayRecipe').innerHTML = ''; return; }
-  const body = d.isWhisky
-    ? `<div class="eyebrow pour-head">Tasting</div>
-       <div class="tasting-note">${esc(d.note || '')}</div>
-       <div class="served-line">Served — ${STRINGS.servedLine}</div>`
-    : `<div class="eyebrow pour-head">Pour</div>
+  const tasting = catStyle(d.cat) === 'tasting';
+  const hero = tasting ? '' : `<div class="recipe-hero">
+          ${mediaInner(d, 52, true, d.pick ? `<span class="pick-pill pick-pill--sheet">${STRINGS.koosPick}</span>` : '')}
+        </div>`;
+  const body = tasting
+    ? `<div class="tasting-note recipe-tasting">${esc(d.note || '')}</div>
+       <div class="eyebrow pour-head">Details</div>
+       <div class="pour-list">
+         ${attrRow('Region', d.region)}
+         ${attrRow('Type', d.type)}
+         ${attrRow('ABV', d.abv)}
+         ${attrRow('Served', d.served)}
+       </div>`
+    : `<div class="recipe-desc">${esc(d.desc)}</div>
+       <div class="eyebrow pour-head">Pour</div>
        <div class="pour-list">
          ${(Array.isArray(d.pour) ? d.pour : []).map(p => `<div class="pour-row"><span>${esc(p.name)}</span><span class="pour-amt">${esc(p.amt)}</span></div>`).join('')}
        </div>`;
@@ -545,13 +586,10 @@ function renderRecipe(){
     <div class="sheet sheet--recipe">
       <div class="sheet-scroll">
         <div class="handle-row"><div class="handle"></div></div>
-        <div class="recipe-hero">
-          ${mediaInner(d, 52, true, d.pick ? `<span class="pick-pill pick-pill--sheet">${STRINGS.koosPick}</span>` : '')}
-        </div>
-        <div class="recipe-body">
+        ${hero}
+        <div class="recipe-body${tasting ? ' recipe-body--tasting' : ''}">
           <div class="eyebrow">${esc(d.cat)}</div>
           <div class="recipe-name">${esc(d.name)}</div>
-          <div class="recipe-desc">${esc(d.desc)}</div>
           ${body}
         </div>
       </div>
@@ -746,11 +784,11 @@ async function boot(){
     if (!DRINKS.length) throw new Error('no drinks in drinks.json');
     // tabs from drinks.json, else derived from the drinks' categories (first-seen order)
     if (Array.isArray(data.tabs) && data.tabs.length){
-      TABS = data.tabs.filter(t => t && t.key).map(t => ({ key:t.key, label:t.label || t.key }));
+      TABS = data.tabs.filter(t => t && t.key).map(t => ({ key:t.key, label:t.label || t.key, style:t.style || 'recipe' }));
     } else {
       const seen = [];
       DRINKS.forEach(d => { if (d.cat && !seen.includes(d.cat)) seen.push(d.cat); });
-      TABS = seen.map(k => ({ key:k, label:k }));
+      TABS = seen.map(k => ({ key:k, label:k, style:'recipe' }));
     }
     if (TABS[0]) S.activeTab = TABS[0].key;   // open on the first category, whatever it's named
     $('greeting').textContent = (data.config && data.config.greeting) || STRINGS.greetingFallback;
