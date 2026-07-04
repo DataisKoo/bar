@@ -171,10 +171,14 @@ html,body{ margin:0; padding:0; background:var(--ink-page); }
   font-family:var(--font-display); font-style:italic; }
 .served-line{ margin-top:14px; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted-deep); }
 .sheet-cta-wrap{ position:absolute; left:0; right:0; bottom:0; padding:16px 18px 18px;
-  background:linear-gradient(180deg, transparent, var(--sheet-recipe) 42%); pointer-events:none; }
-.cta-add{ display:flex; align-items:center; justify-content:center; gap:9px; background:var(--brass);
+  background:linear-gradient(180deg, transparent, var(--sheet-recipe) 42%);
+  pointer-events:none; display:flex; gap:10px; }
+.cta-add{ flex:1; display:flex; align-items:center; justify-content:center; gap:9px; background:var(--brass);
   color:var(--cta-ink); padding:15px; border-radius:var(--radius-card); font-size:13.5px;
   letter-spacing:.03em; font-weight:500; cursor:pointer; pointer-events:auto; }
+.cta-back{ flex:none; display:flex; align-items:center; justify-content:center; padding:15px 22px;
+  border-radius:var(--radius-card); font-size:13.5px; letter-spacing:.03em; color:var(--tab-idle);
+  box-shadow:inset 0 0 0 1px var(--ring-14); cursor:pointer; pointer-events:auto; }
 
 /* name prompt */
 .modal{ width:82%; max-width:340px; background:var(--panel); border-radius:var(--radius-modal);
@@ -333,6 +337,7 @@ const LS = { orders:'koo_orders', names:'koo_names', host:'koo_host' };
 const STRINGS = {
   koosPick: 'Koo’s Pick',
   addToOrder: 'Add to Order',
+  back: 'Back',
   emptyQueue: 'Nothing ordered yet.<br>Tap a drink, then “Add to Order”.',
   nightYoung: 'The night is young.',
   hostOn: 'Host mode on', hostOff: 'Host mode off',
@@ -553,6 +558,7 @@ function renderRecipe(){
         </div>
       </div>
       <div class="sheet-cta-wrap">
+        <div class="cta-back" onclick="App.closeSheet()">${STRINGS.back}</div>
         <div class="cta-add" onclick="App.addFromSheet()">${STRINGS.addToOrder}</div>
       </div>
     </div>`;
