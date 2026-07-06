@@ -125,6 +125,14 @@ html,body{ margin:0; padding:0; background:var(--ink-page); }
 .row-name{ font-family:var(--font-display); font-size:21px; color:var(--cream); }
 .tag-pick{ font-size:8.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--brass);
   border:1px solid var(--brass-line-45); padding:3px 7px; border-radius:999px; flex:none; }
+/* out-of-stock (host long-press toggles it; shared to every phone) */
+.tag-out{ font-size:8.5px; letter-spacing:.16em; text-transform:uppercase; color:#e0919b;
+  border:1px solid rgba(224,145,155,.5); padding:3px 7px; border-radius:999px; flex:none; }
+.row--out .thumb, .row--out .cellar-accent, .row--out .row-name, .row--out .row-spec,
+.row--out .row-desc, .featured--out .featured-img, .featured--out .featured-caption{ opacity:.4; }
+.cta-add--out{ opacity:.45; pointer-events:none; }
+/* a long-press on a photo card must not trigger the iOS image/save callout */
+.row, .featured{ -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
 .row-spec{ font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin-top:4px; }
 .row-desc{ font-size:12.5px; color:var(--body-text); margin-top:7px; line-height:1.45; }
 /* cellar-list (tasting) rows: slim colour accent instead of a photo thumbnail */
@@ -346,7 +354,8 @@ const STRINGS = {
   back: 'Back',
   emptyQueue: 'Nothing ordered yet.<br>Tap a drink, then “Add to Order”.',
   nightYoung: 'The night is young.',
-  hostOn: 'Host mode on', hostOff: 'Host mode off',
+  hostOn: 'Host mode on — long-press a drink to mark it out', hostOff: 'Host mode off',
+  outTonight: 'Out tonight', backInStock: 'Back in stock',
   newNight: 'New night', newNightConfirm: 'Tap again to clear',
   nightCleared: 'Fresh night — queue cleared',
   servedLine: 'neat, or over one large cube',
@@ -434,10 +443,12 @@ function makeLocalStore(onChange){
     advance(id){ orders = advanceIn(orders, id); save(); },
     remove(id){ orders = removeIn(orders, id); save(); },
     clearNight(){ orders = []; save(); },
+    setStock(){ /* single-device mode: no shared stock */ },
   };
 }
 function makeRemoteStore(onChange){
   let orders = [];
+  let stock = [];     // names of drinks currently out of stock (shared, host-set)
   let seq = 0;        // stale list responses (out-of-order resolution) are dropped
   let inflight = 0;   // while a write is pending, polls must not clobber optimistic state
   async function refresh(){
@@ -448,7 +459,8 @@ function makeRemoteStore(onChange){
       const j = await r.json();
       if (mySeq !== seq || inflight > 0) return;
       orders = Array.isArray(j.orders) ? j.orders : [];
-      onChange(orders);
+      stock = Array.isArray(j.stock) ? j.stock : [];
+      onChange(orders, stock);
     }catch(e){ console.warn('orders refresh failed', e); }
   }
   // text/plain avoids a CORS preflight, which Apps Script web apps don't answer
@@ -461,7 +473,7 @@ function makeRemoteStore(onChange){
     finally{ inflight--; }
     if (inflight === 0) refresh();
   }
-  const optimistic = fn => { orders = fn(orders); onChange(orders); };
+  const optimistic = fn => { orders = fn(orders); onChange(orders, stock); };
   return {
     mode:'remote',
     start(){ refresh(); setInterval(refresh, CONFIG.POLL_MS); },
@@ -469,12 +481,29 @@ function makeRemoteStore(onChange){
     advance(id){ optimistic(os => advanceIn(os, id)); post({ action:'advance', id }); },
     remove(id){ optimistic(os => removeIn(os, id)); post({ action:'remove', id }); },
     clearNight(){ optimistic(() => []); post({ action:'clearNight' }); },
+    setStock(drink, out){
+      stock = out ? [...new Set([...stock, drink])] : stock.filter(d => d !== drink);
+      onChange(orders, stock);
+      post({ action:'setStock', drink, out });
+    },
   };
 }
 /* ---------- renderers ---------- */
 let ORDERS = [];   // latest snapshot from the store, single source for all order UI
+let STOCK = [];    // names of drinks currently out of stock (shared)
 let lastOrdersJson = null;
-function onOrders(orders){
+let lastStockJson = null;
+const isOut = name => STOCK.indexOf(name) !== -1;
+function onOrders(orders, stock){
+  if (stock !== undefined){
+    const sj = JSON.stringify(stock);
+    if (sj !== lastStockJson){       // stock changed: re-grey the menu and any open recipe
+      lastStockJson = sj;
+      STOCK = Array.isArray(stock) ? stock : [];
+      renderMenu();
+      if (S.selected) renderRecipe();
+    }
+  }
   const json = JSON.stringify(orders);
   if (json === lastOrdersJson) return;   // poll tick with no change: don't disturb the DOM
   lastOrdersJson = json;
@@ -508,24 +537,30 @@ function renderFeatured(){
   const idx = DRINKS.findIndex(d => d.cat === S.activeTab && d.pick);
   if (idx < 0){ $('featured').innerHTML = ''; return; }
   const d = DRINKS[idx];
+  const out = isOut(d.name);
   $('featured').innerHTML =
-    `<div class="featured" onclick="App.open(${idx})">
+    `<div class="featured${out ? ' featured--out' : ''}" data-drink="${esc(d.name)}" onclick="App.open(${idx})">
       <div class="featured-img">
         ${mediaInner(d, 56, true, `<span class="pick-pill pick-pill--featured">${STRINGS.koosPick}</span>`)}
       </div>
       <div class="featured-caption">
-        <div class="featured-name">${esc(d.name)}</div>
+        <div class="featured-name">${esc(d.name)}${out ? ` <span class="tag-out">${STRINGS.outTonight}</span>` : ''}</div>
         <div class="featured-spec">${esc(d.spec)}</div>
       </div>
     </div>`;
 }
+// a drink out of stock shows its "Out tonight" badge in place of the Koo's Pick tag
+function statusTag(d){
+  if (isOut(d.name)) return `<span class="tag-out">${STRINGS.outTonight}</span>`;
+  return d.pick ? `<span class="tag-pick">${STRINGS.koosPick}</span>` : '';
+}
 function recipeRow(d, i){
-  return `<div class="row" onclick="App.open(${i})">
+  return `<div class="row${isOut(d.name) ? ' row--out' : ''}" data-drink="${esc(d.name)}" onclick="App.open(${i})">
     <div class="thumb">${mediaInner(d, 26, false, '')}</div>
     <div class="row-body">
       <div class="row-top">
         <span class="row-name">${esc(d.name)}</span>
-        ${d.pick ? `<span class="tag-pick">${STRINGS.koosPick}</span>` : ''}
+        ${statusTag(d)}
       </div>
       <div class="row-spec">${esc(d.spec)}</div>
       <div class="row-desc">${esc(d.desc)}</div>
@@ -533,13 +568,13 @@ function recipeRow(d, i){
   </div>`;
 }
 function cellarRow(d, i){
-  return `<div class="row row--cellar" onclick="App.open(${i})">
+  return `<div class="row row--cellar${isOut(d.name) ? ' row--out' : ''}" data-drink="${esc(d.name)}" onclick="App.open(${i})">
     <div class="cellar-accent" style="background:${esc(d.tint || 'rgba(200,163,90,.6)')}"></div>
     <div class="row-body">
       <div class="row-top">
         <span class="row-name">${esc(d.name)}</span>
         <span class="cellar-meta">
-          ${d.pick ? `<span class="tag-pick">${STRINGS.koosPick}</span>` : ''}
+          ${statusTag(d)}
           ${d.abv ? `<span class="cellar-abv">${esc(d.abv)}</span>` : ''}
         </span>
       </div>
@@ -558,7 +593,13 @@ function renderList(){
     .filter(x => x.d.cat === S.activeTab)
     .map(({ d, i }) => tasting ? cellarRow(d, i) : recipeRow(d, i)).join('');
 }
-function renderMenu(){ renderTabs(); renderFeatured(); renderList(); }
+function renderMenu(){ renderTabs(); renderFeatured(); renderList(); armStockCards(); }
+// in host mode, a long-press on any drink card toggles its out-of-stock state (short tap still opens the recipe)
+function armStockCards(){
+  document.querySelectorAll('#featured [data-drink], #list [data-drink]').forEach(el => {
+    longPress(el, () => toggleStock(el.getAttribute('data-drink')), () => S.host);
+  });
+}
 
 function renderRecipe(){
   const d = S.selected;
@@ -589,13 +630,15 @@ function renderRecipe(){
         ${hero}
         <div class="recipe-body${tasting ? ' recipe-body--tasting' : ''}">
           <div class="eyebrow">${esc(d.cat)}</div>
-          <div class="recipe-name">${esc(d.name)}</div>
+          <div class="recipe-name">${esc(d.name)}${isOut(d.name) ? ` <span class="tag-out">${STRINGS.outTonight}</span>` : ''}</div>
           ${body}
         </div>
       </div>
       <div class="sheet-cta-wrap">
         <div class="cta-back" onclick="App.closeSheet()">${STRINGS.back}</div>
-        <div class="cta-add" onclick="App.addFromSheet()">${STRINGS.addToOrder}</div>
+        ${isOut(d.name)
+          ? `<div class="cta-add cta-add--out">${STRINGS.outTonight}</div>`
+          : `<div class="cta-add" onclick="App.addFromSheet()">${STRINGS.addToOrder}</div>`}
       </div>
     </div>`;
 }
@@ -687,13 +730,15 @@ function toggleHost(){
   if (S.orderOpen) renderOrderSheet();
   flashToast(S.host ? STRINGS.hostOn : STRINGS.hostOff);
 }
-function attachLongPress(el){
-  // per-element state; handles touch→mouse compat events, moved fingers, multi-touch
+// generic long-press: onFire() after LP_MS; armed() (optional) gates whether the press arms at all.
+// handles touch→mouse compat events, moved fingers, multi-touch; suppresses the tap that would follow.
+function longPress(el, onFire, armed){
   let timer = null, fired = false, resetT = null, touchActive = false, sx = 0, sy = 0;
   const start = () => {
     if (timer) return;                       // a second pointer must not restart the press
+    if (armed && !armed()) return;           // e.g. card stock-toggle only arms in host mode
     fired = false; clearTimeout(resetT);
-    timer = setTimeout(() => { fired = true; toggleHost(); }, LP_MS);
+    timer = setTimeout(() => { fired = true; onFire(); }, LP_MS);
   };
   const end = () => {
     if (timer){ clearTimeout(timer); timer = null; }
@@ -712,10 +757,17 @@ function attachLongPress(el){
   el.addEventListener('mousedown', () => { if (!touchActive) start(); });
   el.addEventListener('mouseup', end);
   el.addEventListener('mouseleave', end);
-  // a completed long-press must not also count as a tap (e.g. enter the splash)
+  el.addEventListener('contextmenu', e => { if (armed && armed()) e.preventDefault(); });  // block the iOS callout on a photo card
+  // a completed long-press must not also count as a tap (e.g. enter the splash / open a recipe)
   el.addEventListener('click', e => {
     if (fired){ fired = false; clearTimeout(resetT); e.stopPropagation(); e.preventDefault(); }
   }, true);
+}
+function attachLongPress(el){ longPress(el, toggleHost); }   // the K logo / wordmark toggles host mode
+function toggleStock(name){
+  const out = !isOut(name);
+  store.setStock(name, out);
+  flashToast(`${name} — ${out ? STRINGS.outTonight : STRINGS.backInStock}`);
 }
 
 /* ---------- actions (inline handlers) ---------- */
